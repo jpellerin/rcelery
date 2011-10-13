@@ -1,0 +1,9 @@
+amqplib==1.0.0
+anyjson==0.3.1
+celery==2.3.1
+importlib==1.0.2
+kombu==1.2.1
+ordereddict==1.1
+pyparsing==1.5.6
+python-dateutil==1.5
+wsgiref==0.1.2

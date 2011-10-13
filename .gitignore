@@ -1,0 +1,7 @@
+*.log
+spec/integration/python_components/bin
+spec/integration/python_components/include
+spec/integration/python_components/lib
+spec/integration/var
+Gemfile.lock
+pkg/*

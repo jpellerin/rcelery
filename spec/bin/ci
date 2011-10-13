@@ -1,0 +1,81 @@
+#! /bin/bash
+
+function install_gem_dependencies {
+  bundle install
+}
+
+function install_python_dependencies {
+  pushd spec/integration/python_components
+    virtualenv --no-site-packages .
+    bin/pip install -r requirements.txt
+  popd
+}
+
+function run_rabbit {
+  pushd spec/integration
+    bundle exec foreman start rabbit &
+  popd
+
+  export RABBITPID=$!
+  rabbitmqctl -q -n $RABBITMQ_NODENAME wait
+  rabbitmqctl -q -n $RABBITMQ_NODENAME add_vhost /integration
+  rabbitmqctl -q -n $RABBITMQ_NODENAME set_permissions -p /integration guest ".*" ".*" ".*"
+}
+
+function run_daemons {
+  pushd spec/integration
+    bundle exec foreman start -c 'rabbit=0,celeryd=1,rceleryd=1' &
+  popd
+
+  export DAEMONSPID=$!
+}
+
+function setup {
+  export RCELERY_PORT=${RCELERY_PORT:-5672}
+  export RCELERY_HOST=${RCELERY_HOST:-localhost}
+  export RCELERY_VHOST=${RCELERY_VHOST:-/integration}
+  export RABBITMQ_NODENAME=rcelery@localhost
+  export RABBITMQ_NODE_PORT=$RCELERY_PORT
+  export RABBITMQ_LOG_BASE=var/log
+  export RABBITMQ_MNESIA_BASE=var/mnesia
+
+  mkdir -p spec/integration/var/log
+
+  install_gem_dependencies
+  install_python_dependencies
+  # run_rabbit
+  run_daemons
+}
+
+function teardown {
+  # kill $RABBITPID
+  kill $DAEMONSPID
+}
+
+function break_on_fail {
+  if [ $? -ne 0 ]; then
+    teardown
+    exit 1
+  fi
+}
+
+function run_units {
+  bundle exec rake spec:unit
+  break_on_fail
+}
+
+function run_integrations {
+  export RCELERY_APPLICATION=integration
+  bundle exec rake spec:integration:ruby_worker
+  break_on_fail
+
+  export RCELERY_APPLICATION=python.integration
+  bundle exec rake spec:integration:python_worker
+  break_on_fail
+}
+
+setup
+  run_units
+  run_integrations
+teardown
+

@@ -1,0 +1,4 @@
+rabbit: bin/rabbitmq-server
+rceleryd: bin/rceleryd --tasks tasks --vhost=$RCELERY_VHOST --host=$RCELERY_HOST --port=$RCELERY_PORT --application integration --workers 4
+celeryd: bin/celeryd -Q rcelery.python.integration
+
